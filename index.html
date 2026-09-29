@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Thuya Maung — Network engineer building AI systems</title>
+<meta name="description" content="Twenty years keeping networks and hardware running, now building the AI systems that support them. Three production-grade projects in Python: multi-agent ticket triage, offline RAG for network incidents, and a bilingual troubleshooting assistant.">
+<meta property="og:title" content="Thura — Network engineer building AI systems">
+<meta property="og:description" content="Twenty years keeping networks and hardware running, now building the AI systems that support them.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://inkychalk.github.io/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#05080F;
+  --ink-2:#080D18;
+  --glass:rgba(12,20,36,.55);
+  --glass-2:rgba(14,24,42,.42);
+  --edge-lit:rgba(190,215,255,.34);
+  --edge-dim:rgba(120,150,200,.09);
+  --teal:#3DD6C4;
+  --indigo:#5B8CFF;
+  --amber:#FFA24D;
+  --text:#E9EFF8;
+  --muted:#93A3BC;
+  --faint:#65748C;
+  --r-card:24px;
+  --r-inner:14px;
+  --sans:'Sora',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,'SF Mono',Menlo,monospace;
+  --shadow:0 24px 70px -20px rgba(0,0,0,.72), 0 2px 8px rgba(0,0,0,.4);
+  --maxw:1080px;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --ink:#EDF1F7; --ink-2:#E3E9F3;
+    --glass:rgba(255,255,255,.52);
+    --glass-2:rgba(255,255,255,.38);
+    --edge-lit:rgba(255,255,255,.95);
+    --edge-dim:rgba(40,70,120,.10);
+    --teal:#0E8C7D; --indigo:#2B58CC; --amber:#B4631A;
+    --text:#111A28; --muted:#44546E; --faint:#63728C;
+    --shadow:0 24px 60px -24px rgba(20,40,80,.30), 0 2px 6px rgba(20,40,80,.10);
+    color-scheme:light;
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  background:var(--ink);
+  color:var(--text);
+  font-family:var(--sans);
+  font-weight:300;
+  line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+
+/* ---------- living background ---------- */
+.mesh{position:fixed;inset:-25%;z-index:-2;pointer-events:none;filter:blur(90px) saturate(135%)}
+.blob{position:absolute;border-radius:50%;opacity:.55;will-change:transform}
+.b1{width:56vw;height:56vw;left:-6%;top:-4%;background:radial-gradient(circle,#1E4FB8 0%,transparent 66%);animation:drift1 44s ease-in-out infinite}
+.b2{width:48vw;height:48vw;right:-8%;top:14%;background:radial-gradient(circle,#0E7E76 0%,transparent 64%);animation:drift2 56s ease-in-out infinite}
+.b3{width:40vw;height:40vw;left:22%;bottom:-8%;background:radial-gradient(circle,#7A3BC4 0%,transparent 66%);animation:drift3 64s ease-in-out infinite}
+.b4{width:26vw;height:26vw;right:16%;bottom:6%;background:radial-gradient(circle,#B4601C 0%,transparent 68%);opacity:.34;animation:drift2 50s ease-in-out infinite reverse}
+@keyframes drift1{0%,100%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(9vw,7vh,0) scale(1.14)}}
+@keyframes drift2{0%,100%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(-11vw,9vh,0) scale(.88)}}
+@keyframes drift3{0%,100%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(7vw,-9vh,0) scale(1.18)}}
+.grain{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.5;
+  background:
+    radial-gradient(ellipse 120% 80% at 50% -10%, transparent 40%, var(--ink) 100%),
+    linear-gradient(transparent 0 2px, rgba(0,0,0,.14) 2px 3px);
+  background-size:100% 100%, 100% 3px;
+}
+@media (prefers-color-scheme: light){
+  .blob{opacity:.34}
+  .grain{opacity:.35;background:radial-gradient(ellipse 120% 80% at 50% -10%, transparent 40%, var(--ink) 100%)}
+}
+
+/* ---------- glass ---------- */
+.glass{
+  position:relative;
+  background:var(--glass);
+  backdrop-filter:blur(26px) saturate(165%);
+  -webkit-backdrop-filter:blur(26px) saturate(165%);
+  border-radius:var(--r-card);
+  box-shadow:var(--shadow);
+  isolation:isolate;
+}
+.glass::before{
+  content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  padding:1px;
+  background:linear-gradient(145deg,var(--edge-lit),transparent 42%,transparent 62%,var(--edge-dim));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;
+}
+
+/* ---------- layout ---------- */
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
+section{padding:clamp(64px,10vw,124px) 0}
+h1,h2,h3{font-weight:600;letter-spacing:-.028em;line-height:1.1;margin:0}
+h2{font-size:clamp(1.65rem,3.6vw,2.45rem);margin-bottom:14px}
+.lede{color:var(--muted);max-width:62ch;font-size:1.02rem;margin:0 0 44px}
+p{max-width:68ch}
+a{color:inherit}
+
+/* ---------- hero ---------- */
+.hero{min-height:100svh;display:flex;align-items:center;padding-top:96px;padding-bottom:64px}
+.hero h1{font-size:clamp(2.5rem,7.4vw,4.6rem);font-weight:700;letter-spacing:-.045em;margin-bottom:22px}
+.hero h1 span{display:block;font-size:.44em;font-weight:300;letter-spacing:-.018em;color:var(--muted);margin-top:18px;line-height:1.45;max-width:20ch}
+.hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:clamp(28px,5vw,64px);align-items:center;width:100%}
+@media (max-width:860px){.hero-grid{grid-template-columns:1fr;gap:40px}}
+
+.term{padding:20px 22px 22px;font-family:var(--mono);font-size:.845rem;line-height:1.85;min-height:206px}
+.term-bar{display:flex;gap:7px;margin-bottom:16px}
+.dot{width:11px;height:11px;border-radius:50%;background:var(--edge-dim);border:1px solid var(--edge-lit)}
+.dot.live{background:var(--amber);border-color:transparent;box-shadow:0 0 12px var(--amber)}
+.term-line{white-space:pre-wrap;word-break:break-word}
+.prompt{color:var(--teal)}
+.term .ok{color:var(--teal)}
+.term .dim{color:var(--faint)}
+.caret{display:inline-block;width:8px;height:1.05em;background:var(--teal);vertical-align:-2px;animation:blink 1.08s steps(2) infinite}
+@keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+
+.links{display:flex;flex-wrap:wrap;gap:12px;margin-top:36px}
+.btn{
+  display:inline-flex;align-items:center;gap:9px;
+  padding:11px 19px;border-radius:999px;
+  background:var(--glass-2);
+  backdrop-filter:blur(18px) saturate(160%);
+  -webkit-backdrop-filter:blur(18px) saturate(160%);
+  border:1px solid var(--edge-dim);
+  border-top-color:var(--edge-lit);
+  text-decoration:none;font-size:.9rem;font-weight:400;
+  transition:transform .22s cubic-bezier(.2,.8,.3,1),border-color .22s,background .22s;
+}
+.btn:hover,.btn:focus-visible{transform:translateY(-2px);border-color:var(--edge-lit);background:var(--glass)}
+.btn svg{width:16px;height:16px;flex:none;opacity:.82}
+
+/* ---------- the system ---------- */
+.diagram{padding:clamp(22px,4vw,40px);margin-top:8px}
+.diagram svg{width:100%;height:auto;display:block;overflow:visible}
+.flow-path{fill:none;stroke-width:1.6;stroke-linecap:round;
+  stroke-dasharray:var(--len);stroke-dashoffset:var(--len);
+  transition:stroke-dashoffset 1.5s cubic-bezier(.4,0,.2,1)}
+.revealed .flow-path{stroke-dashoffset:0}
+.flow-path.dashed{stroke-dasharray:6 7;stroke-dashoffset:0;opacity:0;transition:opacity .9s ease 1.1s}
+.revealed .flow-path.dashed{opacity:.55}
+.node-box{fill:var(--glass-2);stroke:var(--edge-dim);stroke-width:1}
+.node-box.accent{stroke:var(--teal);stroke-width:1.4}
+.node-t{font-family:var(--sans);font-size:12.5px;font-weight:500;fill:var(--text)}
+.node-s{font-family:var(--mono);font-size:10px;fill:var(--faint)}
+.dgm-note{font-size:.87rem;color:var(--muted);margin:22px 0 0;max-width:64ch}
+
+/* ---------- projects ---------- */
+.projects{display:grid;gap:26px}
+.card{padding:clamp(24px,3.4vw,38px);will-change:transform;transform-style:preserve-3d}
+.card .sheen{
+  position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:2;
+  background:radial-gradient(420px circle at var(--mx,50%) var(--my,0%),rgba(190,220,255,.11),transparent 62%);
+  opacity:0;transition:opacity .35s;
+}
+.card:hover .sheen{opacity:1}
+.card-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:12px 20px}
+.card h3{font-size:clamp(1.2rem,2.5vw,1.55rem);letter-spacing:-.03em}
+.role{font-family:var(--mono);font-size:.7rem;color:var(--teal);letter-spacing:.06em}
+.card p{color:var(--muted);margin:14px 0 0;font-size:.97rem}
+.shot{
+  margin:26px 0 0;border-radius:var(--r-inner);overflow:hidden;
+  border:1px solid var(--edge-dim);background:rgba(0,0,0,.22);
+  aspect-ratio:16/10;display:flex;align-items:center;justify-content:center;
+}
+.shot img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
+.shot.empty{display:none}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin:26px 0 0;
+  background:var(--edge-dim);border-radius:var(--r-inner);overflow:hidden}
+.stat{background:var(--glass-2);padding:16px 14px;text-align:center}
+.stat b{display:block;font-family:var(--mono);font-size:clamp(1.15rem,2.6vw,1.5rem);font-weight:600;color:var(--text);letter-spacing:-.03em}
+.stat small{display:block;color:var(--faint);font-size:.73rem;margin-top:4px;line-height:1.35}
+@media (max-width:520px){.stats{grid-template-columns:1fr}}
+
+.detail{margin:24px 0 0;padding:16px 18px;border-radius:var(--r-inner);
+  background:var(--glass-2);border-left:2px solid var(--teal)}
+.detail p{margin:0;font-size:.93rem;color:var(--muted)}
+.stack{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 0;list-style:none;padding:0}
+.stack li{font-family:var(--mono);font-size:.74rem;color:var(--muted);
+  padding:5px 11px;border-radius:7px;border:1px solid var(--edge-dim);background:rgba(0,0,0,.14)}
+@media (prefers-color-scheme: light){.stack li{background:rgba(255,255,255,.45)}}
+.card .links{margin-top:26px}
+
+/* ---------- background + contact ---------- */
+.bg-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(20px,4vw,48px)}
+@media (max-width:760px){.bg-grid{grid-template-columns:1fr}}
+.bg-grid p{margin:0 0 18px;color:var(--muted)}
+.facts{list-style:none;padding:clamp(22px,3vw,30px);margin:0;display:grid;gap:16px}
+.facts li{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:baseline;font-size:.93rem}
+.facts span{font-family:var(--mono);font-size:.72rem;color:var(--teal);white-space:nowrap}
+
+.contact{padding:clamp(30px,5vw,54px);text-align:center}
+.contact h2{margin-bottom:12px}
+.contact .lede{margin:0 auto 30px}
+.contact .links{justify-content:center}
+footer{padding:0 0 60px;text-align:center;color:var(--faint);font-size:.8rem;font-family:var(--mono)}
+
+/* ---------- reveal ---------- */
+.rise{opacity:0;transform:translateY(22px);transition:opacity .8s cubic-bezier(.2,.7,.3,1),transform .8s cubic-bezier(.2,.7,.3,1)}
+.rise.revealed{opacity:1;transform:none}
+
+:focus-visible{outline:2px solid var(--teal);outline-offset:3px;border-radius:6px}
+
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+  .rise{opacity:1;transform:none}
+  .flow-path{stroke-dashoffset:0}
+  .flow-path.dashed{opacity:.55}
+  .caret{display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="mesh" aria-hidden="true">
+  <div class="blob b1"></div><div class="blob b2"></div>
+  <div class="blob b3"></div><div class="blob b4"></div>
+</div>
+<div class="grain" aria-hidden="true"></div>
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <h1>Thuya Maung
+        <span>Twenty years keeping networks and hardware running. Now building the AI systems that support them.</span>
+      </h1>
+      <nav class="links" aria-label="Contact">
+        <a class="btn" href="mailto:inkychalk@gmail.com">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><path d="m3 7 9 6 9-6"/></svg>
+          inkychalk@gmail.com</a>
+        <a class="btn" href="https://www.linkedin.com/in/inkychalk" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5M3 9h4v12H3zm7 0h3.8v1.7h.05c.53-.95 1.83-1.95 3.77-1.95C21.6 8.75 23 11 23 14.3V21h-4v-5.9c0-1.4-.03-3.2-2-3.2s-2.3 1.5-2.3 3.1V21h-4z"/></svg>
+          LinkedIn</a>
+        <a class="btn" href="https://github.com/inkychalk" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48l-.01-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.53 2.34 1.09 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.56-1.11-4.56-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.57 4.94.36.31.68.92.68 1.85l-.01 2.75c0 .26.18.58.69.48A10 10 0 0 0 12 2"/></svg>
+          github.com/inkychalk</a>
+      </nav>
+    </div>
+
+    <div class="glass term" id="term" role="img" aria-label="Terminal showing the command pytest -q returning 145 tests passed in 11.39 seconds.">
+      <div class="term-bar" aria-hidden="true"><i class="dot live"></i><i class="dot"></i><i class="dot"></i></div>
+      <div class="term-line" id="l1"></div>
+      <div class="term-line" id="l2"></div>
+      <div class="term-line" id="l3"></div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- ============ THE SYSTEM ============ -->
+<section id="system" class="wrap">
+  <h2 class="rise">Three projects, one path through a support desk</h2>
+  <p class="lede rise">A customer message arrives from any channel. An agent reads it, decides what kind of problem it is and how urgent, then routes it — to a person, or to a system that handles that domain. Each project stands alone. Together they trace one request end to end.</p>
+
+  <div class="glass diagram rise" id="diagram">
+    <svg viewBox="0 0 900 300" role="img" aria-label="Flow diagram: a customer message enters the triage agent, which routes hardware problems to the troubleshooting chatbot, network problems to the WISP monitoring assistant, and everything else to a person.">
+      <g stroke="var(--indigo)">
+        <path class="flow-path" d="M150 150 H 300"/>
+      </g>
+      <g stroke="var(--teal)">
+        <path class="flow-path dashed" d="M470 120 C 540 120, 560 60, 640 60"/>
+        <path class="flow-path dashed" d="M470 150 C 540 150, 560 155, 640 155"/>
+      </g>
+      <g stroke="var(--amber)">
+        <path class="flow-path" d="M470 180 C 540 180, 560 250, 640 250"/>
+      </g>
+
+      <g>
+        <rect class="node-box" x="10" y="118" width="140" height="64" rx="16"/>
+        <text class="node-t" x="30" y="145">Customer message</text>
+        <text class="node-s" x="30" y="164">messenger · kiosk</text>
+      </g>
+      <g>
+        <rect class="node-box accent" x="300" y="106" width="170" height="88" rx="18"/>
+        <text class="node-t" x="322" y="138">Triage agent</text>
+        <text class="node-s" x="322" y="157">type · urgency</text>
+        <text class="node-s" x="322" y="172">confidence · route</text>
+      </g>
+      <g>
+        <rect class="node-box" x="640" y="30" width="250" height="60" rx="16"/>
+        <text class="node-t" x="662" y="55">Troubleshooting chatbot</text>
+        <text class="node-s" x="662" y="74">hardware, software, install</text>
+      </g>
+      <g>
+        <rect class="node-box" x="640" y="125" width="250" height="60" rx="16"/>
+        <text class="node-t" x="662" y="150">WISP monitoring assistant</text>
+        <text class="node-s" x="662" y="169">network incidents</text>
+      </g>
+      <g>
+        <rect class="node-box" x="640" y="220" width="250" height="60" rx="16"/>
+        <text class="node-t" x="662" y="245">A person</text>
+        <text class="node-s" x="662" y="264">complaints, quotes, low confidence</text>
+      </g>
+    </svg>
+    <p class="dgm-note">Solid lines are wired. Dashed lines are the hand-off interface — defined, routed and tested, with the connection to each system still to build.</p>
+  </div>
+</section>
+
+<!-- ============ PROJECTS ============ -->
+<section id="work" class="wrap">
+  <h2 class="rise">Selected work</h2>
+  <p class="lede rise">Three systems built to run, not to demo. Every number below comes from the repository.</p>
+
+  <div class="projects">
+
+    <!-- 1 -->
+    <article class="glass card rise" data-tilt>
+      <div class="sheen" aria-hidden="true"></div>
+      <div class="card-head">
+        <h3>Customer support ticket triage agent</h3>
+        <p class="role">the front door</p>
+      </div>
+      <p>Messages arrive from social platforms and from a tablet at the counter. A pydantic-ai agent reads each one and returns structured output — issue type, urgency, a confidence score — which drives where the ticket goes next. Low confidence goes to a human rather than being trusted.</p>
+
+      <div class="shot" data-shot>
+        <img src="./assets/triage-kiosk.png" alt="Walk-in kiosk showing a language switcher, a name field and a request field" loading="lazy" decoding="async">
+      </div>
+
+      <div class="stats">
+        <div class="stat"><b data-count="145">0</b><small>tests passing, no network calls</small></div>
+        <div class="stat"><b data-count="50">0</b><small>concurrent threads, ticket numbering tested</small></div>
+        <div class="stat"><b data-count="6">0</b><small>channels behind one interface</small></div>
+      </div>
+
+      <div class="detail">
+        <p>Ticket numbers come from an atomic upsert on a daily counter, so two requests can never take the same number. Customer text is treated as untrusted in four layers, ending with a typed schema the model can only fill — there is no free-text channel for an injected instruction to land in.</p>
+      </div>
+
+      <ul class="stack"><li>FastAPI</li><li>pydantic-ai</li><li>SQLAlchemy 2.0</li><li>SQLite</li><li>pytest</li></ul>
+
+      <div class="links">
+        <a class="btn" href="https://github.com/inkychalk/customer-support-ticket-triage-agent" rel="noopener">Read the code</a>
+      </div>
+    </article>
+
+    <!-- 2 -->
+    <article class="glass card rise" data-tilt>
+      <div class="sheen" aria-hidden="true"></div>
+      <div class="card-head">
+        <h3>RAG-based WISP monitoring assistant</h3>
+        <p class="role">the network specialist</p>
+      </div>
+      <p>Ask what happened on a given night and get an answer drawn from router logs, incident notes and playbooks. It runs entirely on a local model with no API key, because network logs expose topology, customers and weak points — exactly what cannot be pasted into a hosted service.</p>
+
+      <div class="shot" data-shot>
+        <img src="./assets/wisp-ask.png" alt="Question interface showing an answer about a network incident with cited evidence" loading="lazy" decoding="async">
+      </div>
+
+      <div class="stats">
+        <div class="stat"><b><span data-count="20">0</span>/21</b><small>evaluation questions passing</small></div>
+        <div class="stat"><b data-count="164">0</b><small>indexed chunks across logs, notes, playbooks</small></div>
+        <div class="stat"><b>0</b><small>API keys required</small></div>
+      </div>
+
+      <div class="detail">
+        <p>Every citation is checked against the evidence actually retrieved, so the model cannot invent a source. Dates, towers and time windows are extracted by rule rather than by embedding — two near-identical log days look the same in vector space, and only a filter can tell them apart.</p>
+      </div>
+
+      <ul class="stack"><li>ChromaDB</li><li>sentence-transformers</li><li>Gradio</li><li>Ollama</li><li>Docker</li></ul>
+
+      <div class="links">
+        <a class="btn" href="https://github.com/inkychalk/rag-based-wisp-monitoring-assistant" rel="noopener">Read the code</a>
+      </div>
+    </article>
+
+    <!-- 3 -->
+    <article class="glass card rise" data-tilt>
+      <div class="sheen" aria-hidden="true"></div>
+      <div class="card-head">
+        <h3>Burmese PC troubleshooting chatbot</h3>
+        <p class="role">the hardware specialist</p>
+      </div>
+      <p>A bilingual assistant for the questions a repair counter answers every day — a PC that will not start, a driver that will not install, Wi-Fi that drops. Burmese or English, one toggle apart, with matching on character n-grams because written Burmese has no spaces between words.</p>
+
+      <div class="shot" data-shot>
+        <img src="./assets/chatbot.png" alt="Chat interface answering a troubleshooting question in Burmese" loading="lazy" decoding="async">
+      </div>
+
+      <div class="stats">
+        <div class="stat"><b data-count="169">0</b><small>tests</small></div>
+        <div class="stat"><b><span data-count="92">0</span>%</b><small>backend coverage</small></div>
+        <div class="stat"><b data-count="150">0</b><small>curated troubleshooting entries</small></div>
+      </div>
+
+      <div class="detail">
+        <p>Two storage layers, deliberately separate. Curated answers never change; a second cache fills up with answers the model has already given, so repeated questions stop costing anything. The system gets cheaper the longer it runs, and generated text can never quietly overwrite what was checked by hand.</p>
+      </div>
+
+      <ul class="stack"><li>Flask</li><li>SQLite</li><li>Gemini</li><li>Docker Compose</li><li>Nginx</li></ul>
+
+      <div class="links">
+        <a class="btn" href="https://github.com/inkychalk/Burmese-PC-Troubleshooting-Chatbot" rel="noopener">Read the code</a>
+      </div>
+    </article>
+
+  </div>
+</section>
+
+<!-- ============ BACKGROUND ============ -->
+<section id="background" class="wrap">
+  <div class="bg-grid">
+    <div>
+      <h2 class="rise">Where this comes from</h2>
+      <div class="rise">
+        <p>I spent two decades repairing hardware and running a wireless ISP — diagnosing faults with a customer waiting, and keeping a network up for people who had no second option when it went down.</p>
+        <p>That work shapes how I build software. The projects here assume dependencies fail, customers send unexpected input, and someone has to fix it at 2am with only the logs to go on. Most people moving into AI development have not had to answer for an outage. I have.</p>
+      </div>
+    </div>
+    <ul class="glass facts rise">
+      <li><span>networks</span>MikroTik certified; years of live WISP infrastructure</li>
+      <li><span>hardware</span>Component-level diagnosis and repair, at volume</li>
+      <li><span>building</span>Python, FastAPI, Flask, Docker, RAG and agent workflows</li>
+      <li><span>languages</span>Burmese, Thai and English</li>
+      <li><span>looking for</span>IT lead, solutions engineering, and AI development work</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ CONTACT ============ -->
+<section class="wrap">
+  <div class="glass contact rise">
+    <h2>Let's talk</h2>
+    <p class="lede">Open to full-time roles and freelance work. The fastest way to reach me is email.</p>
+    <nav class="links" aria-label="Contact">
+      <a class="btn" href="mailto:inkychalk@gmail.com">inkychalk@gmail.com</a>
+      <a class="btn" href="https://www.linkedin.com/in/inkychalk" rel="noopener">LinkedIn</a>
+      <a class="btn" href="https://github.com/inkychalk" rel="noopener">GitHub</a>
+    </nav>
+  </div>
+</section>
+
+</main>
+
+<footer class="wrap">Built by hand. No framework, one file.</footer>
+
+<script>
+(function(){
+  "use strict";
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---- terminal ---- */
+  var l1=document.getElementById('l1'), l2=document.getElementById('l2'), l3=document.getElementById('l3');
+  var cmd='pytest -q';
+  function finish(){
+    l1.innerHTML='<span class="prompt">$</span> '+cmd;
+    l2.innerHTML='<span class="ok">.................................................</span>';
+    l3.innerHTML='<span class="ok">145 passed</span> <span class="dim">in 11.39s</span>';
+  }
+  if(reduced){ finish(); }
+  else{
+    var i=0;
+    l1.innerHTML='<span class="prompt">$</span> <span class="caret"></span>';
+    var typer=setInterval(function(){
+      i++;
+      l1.innerHTML='<span class="prompt">$</span> '+cmd.slice(0,i)+'<span class="caret"></span>';
+      if(i>=cmd.length){
+        clearInterval(typer);
+        setTimeout(function(){
+          l1.innerHTML='<span class="prompt">$</span> '+cmd;
+          var d=0, dots=setInterval(function(){
+            d++;
+            l2.innerHTML='<span class="ok">'+new Array(d+1).join('.')+'</span>';
+            if(d>=49){
+              clearInterval(dots);
+              setTimeout(function(){
+                l3.innerHTML='<span class="ok">145 passed</span> <span class="dim">in 11.39s</span>';
+              },220);
+            }
+          },17);
+        },420);
+      }
+    },72);
+  }
+
+  /* ---- reveal + count up ---- */
+  function countUp(el){
+    var target=parseInt(el.dataset.count,10);
+    if(reduced){ el.textContent=target; return; }
+    var t0=null, dur=1100;
+    function step(ts){
+      if(!t0) t0=ts;
+      var p=Math.min((ts-t0)/dur,1);
+      var eased=1-Math.pow(1-p,3);
+      el.textContent=Math.round(target*eased);
+      if(p<1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  var io=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(!e.isIntersecting) return;
+      e.target.classList.add('revealed');
+      e.target.querySelectorAll('[data-count]').forEach(countUp);
+      io.unobserve(e.target);
+    });
+  },{threshold:.18,rootMargin:'0px 0px -8% 0px'});
+
+  document.querySelectorAll('.rise').forEach(function(el,idx){
+    el.style.transitionDelay=(Math.min(idx,3)*70)+'ms';
+    io.observe(el);
+  });
+
+  /* ---- draw the flow paths ---- */
+  document.querySelectorAll('.flow-path').forEach(function(p){
+    if(p.classList.contains('dashed')) return;
+    var len=p.getTotalLength();
+    p.style.setProperty('--len',len);
+  });
+
+  /* ---- pointer tilt (fine pointers only) ---- */
+  if(!reduced && window.matchMedia('(pointer: fine)').matches){
+    document.querySelectorAll('[data-tilt]').forEach(function(card){
+      var raf=null;
+      card.addEventListener('pointermove',function(ev){
+        if(raf) return;
+        raf=requestAnimationFrame(function(){
+          raf=null;
+          var r=card.getBoundingClientRect();
+          var px=(ev.clientX-r.left)/r.width, py=(ev.clientY-r.top)/r.height;
+          card.style.transform='perspective(1200px) rotateX('+((.5-py)*3.2).toFixed(2)+'deg) rotateY('+((px-.5)*3.2).toFixed(2)+'deg) translateZ(0)';
+          card.style.setProperty('--mx',(px*100).toFixed(1)+'%');
+          card.style.setProperty('--my',(py*100).toFixed(1)+'%');
+        });
+      });
+      card.addEventListener('pointerleave',function(){
+        card.style.transition='transform .5s cubic-bezier(.2,.8,.3,1)';
+        card.style.transform='';
+        setTimeout(function(){card.style.transition='';},520);
+      });
+    });
+  }
+
+  /* ---- hide screenshot frames whose file is missing ---- */
+  document.querySelectorAll('[data-shot] img').forEach(function(img){
+    img.addEventListener('error',function(){ img.parentElement.classList.add('empty'); });
+    if(img.complete && img.naturalWidth===0) img.parentElement.classList.add('empty');
+  });
+})();
+</script>
+</body>
+</html>
